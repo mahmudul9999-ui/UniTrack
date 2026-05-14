@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.UniTrack" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#0a5c36</item>
+        <item name="colorPrimaryDark">#062d1b</item>
+        <item name="colorAccent">#157347</item>
+        <item name="android:windowBackground">#f3f7f5</item>
+        <item name="android:statusBarColor">#062d1b</item>
+    </style>
+</resources>

@@ -18,9 +18,6 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -73,13 +70,18 @@ jobs:
         print('Icons done')
         EOF
 
-    - name: Make gradlew
+    - name: Setup Gradle 8.4
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: 8.4
+
+    - name: Generate gradle wrapper
       run: |
-        gradle wrapper --gradle-version 8.4
+        gradle wrapper --gradle-version 8.4 --distribution-type bin
         chmod +x ./gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon
+      run: ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

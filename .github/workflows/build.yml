@@ -66,8 +66,6 @@ jobs:
             img.save(f'{path}/ic_launcher.png')
             img.save(f'{path}/ic_launcher_round.png')
             print(f'Generated {folder} ({size}x{size})')
-
-        print('Icons done')
         EOF
 
     - name: Setup Gradle 8.4
@@ -80,15 +78,23 @@ jobs:
         gradle wrapper --gradle-version 8.4 --distribution-type bin
         chmod +x ./gradlew
 
-    - name: Generate debug keystore and print SHA-1
+    - name: Restore keystore from secret OR generate new
       run: |
         mkdir -p ~/.android
-        if [ ! -f ~/.android/debug.keystore ]; then
+        if [ -n "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" ]; then
+          echo "✓ Restoring keystore from saved secret"
+          echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+        else
+          echo "⚠ No saved keystore found, generating fresh one"
+          echo "  (You should save the base64 below as DEBUG_KEYSTORE_BASE64 secret)"
           keytool -genkey -v -keystore ~/.android/debug.keystore \
             -alias androiddebugkey -storepass android -keypass android \
             -dname "CN=Android Debug,O=Android,C=US" \
             -keyalg RSA -keysize 2048 -validity 10000
         fi
+
+    - name: Print SHA-1 and base64 keystore
+      run: |
         echo ""
         echo "================================================================"
         echo "SHA-1 FINGERPRINT (add this to Firebase Console!):"
@@ -98,6 +104,12 @@ jobs:
           2>/dev/null | grep "SHA1:" | sed 's/.*SHA1: //'
         echo "================================================================"
         echo ""
+        echo "================================================================"
+        echo "KEYSTORE AS BASE64 (save as GitHub Secret: DEBUG_KEYSTORE_BASE64)"
+        echo "================================================================"
+        base64 -w 0 ~/.android/debug.keystore
+        echo ""
+        echo "================================================================"
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon --stacktrace

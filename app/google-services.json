@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "331086944541",
+    "firebase_url": "https://unitrack-app-29c39-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "unitrack-app-29c39",
+    "storage_bucket": "unitrack-app-29c39.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:331086944541:android:3a75642f9aad2c8d5329f4",
+        "android_client_info": {
+          "package_name": "com.unitrack.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "331086944541-vb52qorhqoocmsv29jocqdkp9jde7vkh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzuEiU276mWchp8tmq3_3J4O4SA7itxpQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "331086944541-vb52qorhqoocmsv29jocqdkp9jde7vkh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

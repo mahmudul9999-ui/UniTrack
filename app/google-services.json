@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "331086944541-e9g6bmtdrs65mu79fifngkovks43k335.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.unitrack.app",
+            "certificate_hash": "611815545f081fadc3e42965e304bf0ab4c123a9"
+          }
+        },
+        {
           "client_id": "331086944541-vb52qorhqoocmsv29jocqdkp9jde7vkh.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -11,8 +11,6 @@ import android.widget.Toast;
 /**
  * Bridge between JavaScript (web app) and Android native code.
  * Methods exposed here are callable from the web page as `Android.methodName()`.
- *
- * The web app calls these to start/stop the background GPS service.
  */
 public class AndroidBridge {
 
@@ -48,7 +46,6 @@ public class AndroidBridge {
             return;
         }
 
-        // Save credentials so the service & BootReceiver can use them
         SharedPreferences prefs = ctx.getSharedPreferences(BootReceiver.PREFS, Context.MODE_PRIVATE);
         prefs.edit()
             .putString("uid", uid)
@@ -58,7 +55,6 @@ public class AndroidBridge {
             .putBoolean("tracking", true)
             .apply();
 
-        // Start foreground service
         Intent svc = new Intent(ctx, LocationForegroundService.class);
         svc.setAction(LocationForegroundService.ACTION_START);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -100,5 +96,20 @@ public class AndroidBridge {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true;
         return ctx.checkSelfPermission(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Called by web app when user taps "Continue with Google".
+     * Triggers native Google Sign-In which bypasses Google's WebView OAuth block.
+     * On success, MainActivity calls back into JavaScript via window.onGoogleSignInSuccess(idToken)
+     * On error, MainActivity calls window.onGoogleSignInError(message)
+     */
+    @JavascriptInterface
+    public void signInWithGoogle() {
+        if (ctx instanceof MainActivity) {
+            ((Activity) ctx).runOnUiThread(() -> {
+                ((MainActivity) ctx).startGoogleSignIn();
+            });
+        }
     }
 }

@@ -31,15 +31,35 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
+
 public class MainActivity extends AppCompatActivity {
 
-    // ═══ CONFIG — Change WEBSITE_URL if you change the subdomain ═══
+    // ═══ CONFIG ═══
     private static final String WEBSITE_URL = "https://unitrack.poribortonkf.com";
+
+    // ════════════════════════════════════════════════════════════
+    // GOOGLE SIGN-IN — Replace with your Firebase Web Client ID
+    //
+    // Find it at: Firebase Console → Authentication → Sign-in method
+    //   → Google → Web SDK configuration → Web client ID
+    //
+    // Format: "123456789012-abcdefghij.apps.googleusercontent.com"
+    // ════════════════════════════════════════════════════════════
+    private static final String WEB_CLIENT_ID = "331086944541-vb52qorhqoocmsv29jocqdkp9jde7vkh.apps.googleusercontent.com";
 
     private static final int PERM_FINE_LOCATION = 1001;
     private static final int PERM_BG_LOCATION   = 1002;
     private static final int PERM_NOTIFICATION  = 1003;
     private static final int PERM_CAMERA        = 1004;
+
+    private static final int FILE_CHOOSER_REQ   = 2001;
+    private static final int GOOGLE_SIGN_IN_REQ = 3001;
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -47,9 +67,8 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout layoutNoNet;
     private TextView textPermission;
 
-    // File chooser for profile photo upload
     private ValueCallback<Uri[]> filePathCallback;
-    private static final int FILE_CHOOSER_REQ = 2001;
+    private GoogleSignInClient googleSignInClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +82,28 @@ public class MainActivity extends AppCompatActivity {
         textPermission    = findViewById(R.id.textPermission);
 
         setupWebView();
+        setupGoogleSignIn();
         startPermissionFlow();
+    }
+
+    private void setupGoogleSignIn() {
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(WEB_CLIENT_ID)
+            .requestEmail()
+            .requestProfile()
+            .build();
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
+    }
+
+    /**
+     * Called from AndroidBridge.signInWithGoogle() when JS triggers Google login.
+     * Signs out first so user can pick a different account each time.
+     */
+    public void startGoogleSignIn() {
+        googleSignInClient.signOut().addOnCompleteListener(this, task -> {
+            Intent signInIntent = googleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQ);
+        });
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -78,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         ws.setCacheMode(WebSettings.LOAD_DEFAULT);
         ws.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         ws.setMediaPlaybackRequiresUserGesture(false);
-        ws.setUserAgentString(ws.getUserAgentString() + " UniTrackApp/1.0");
+        ws.setUserAgentString(ws.getUserAgentString() + " UnitrackerApp/1.1");
 
         webView.addJavascriptInterface(new AndroidBridge(this), "Android");
 
@@ -86,14 +126,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 String url = req.getUrl().toString();
-                // Stay inside UniTrack — open external links in browser
                 if (url.contains("poribortonkf.com") || url.contains("firebase")
                         || url.contains("googleapis") || url.contains("openstreetmap")
                         || url.contains("gstatic.com") || url.contains("unpkg.com")
                         || url.contains("googleusercontent")) {
                     return false;
                 }
-                // External links: open in Chrome
                 try {
                     Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(i);
@@ -122,19 +160,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
-            // Grant geolocation to website (we already have OS permission)
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, true);
             }
 
-            // Grant camera (for profile photo)
             @Override
             public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
 
-            // Native confirm dialog
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
                 new AlertDialog.Builder(MainActivity.this)
@@ -146,7 +181,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // Native alert dialog
             @Override
             public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
                 new AlertDialog.Builder(MainActivity.this)
@@ -157,7 +191,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // File chooser for profile photo
             @Override
             public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> fpc, FileChooserParams params) {
                 if (filePathCallback != null) filePathCallback.onReceiveValue(null);
@@ -177,11 +210,53 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+
+        // File chooser result
         if (req == FILE_CHOOSER_REQ && filePathCallback != null) {
             Uri[] uris = WebChromeClient.FileChooserParams.parseResult(res, data);
             filePathCallback.onReceiveValue(uris);
             filePathCallback = null;
+            return;
         }
+
+        // Google Sign-In result
+        if (req == GOOGLE_SIGN_IN_REQ) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                String idToken = account != null ? account.getIdToken() : null;
+                if (idToken != null && !idToken.isEmpty()) {
+                    // Escape the token for safe JS injection
+                    String safeToken = idToken.replace("\\", "\\\\").replace("\"", "\\\"");
+                    String js = "if(window.onGoogleSignInSuccess){window.onGoogleSignInSuccess(\""
+                        + safeToken + "\");}";
+                    webView.evaluateJavascript(js, null);
+                } else {
+                    callJsError("No ID token returned. Make sure Web Client ID is configured correctly.");
+                }
+            } catch (ApiException e) {
+                String errMsg;
+                int code = e.getStatusCode();
+                // Common error codes
+                if (code == 10) {
+                    errMsg = "Configuration error (code 10). Check that SHA-1 fingerprint is added to Firebase.";
+                } else if (code == 12501) {
+                    // User cancelled - silent
+                    return;
+                } else if (code == 7) {
+                    errMsg = "Network error. Check your internet connection.";
+                } else {
+                    errMsg = "Google sign-in failed (code " + code + ")";
+                }
+                callJsError(errMsg);
+            }
+        }
+    }
+
+    private void callJsError(String msg) {
+        String safeMsg = msg.replace("\\", "\\\\").replace("\"", "\\\"");
+        String js = "if(window.onGoogleSignInError){window.onGoogleSignInError(\"" + safeMsg + "\");}";
+        webView.evaluateJavascript(js, null);
     }
 
     // ════════════════════════════════════════════════════════════
@@ -268,9 +343,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ════════════════════════════════════════════════════════════
-    // BATTERY OPTIMIZATION WHITELIST
-    // ════════════════════════════════════════════════════════════
     private void requestBatteryWhitelist() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
 
@@ -308,9 +380,6 @@ public class MainActivity extends AppCompatActivity {
             .show();
     }
 
-    // ════════════════════════════════════════════════════════════
-    // WEBSITE LOADING
-    // ════════════════════════════════════════════════════════════
     private void loadWebsite() {
         layoutPermission.setVisibility(View.GONE);
         layoutNoNet.setVisibility(View.GONE);

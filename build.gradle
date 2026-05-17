@@ -6,6 +6,8 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.1.4'
+        // Google services plugin — required for Google Sign-In
+        classpath 'com.google.gms:google-services:4.4.0'
     }
 }
 

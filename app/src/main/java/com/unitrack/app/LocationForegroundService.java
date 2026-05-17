@@ -58,7 +58,7 @@ public class LocationForegroundService extends Service implements LocationListen
 
     // ═══ CONFIG ═══
     // CHANGE THIS to your NEW Firebase project's database URL
-    private static final String FIREBASE_URL = "https://unitrack-app-29c39-default-rtdb.asia-southeast1.firebasedatabase.app";
+    private static final String FIREBASE_URL = "https://YOUR-NEW-PROJECT-default-rtdb.firebaseio.com";
 
     private LocationManager locationManager;
     private NotificationManager notificationManager;
